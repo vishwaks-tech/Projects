@@ -4,7 +4,7 @@ import * as allure from 'allure-js-commons'
 let auth_token: string
 test.beforeAll("Get Token", async({request}) => {
     const token = await request.post('https://conduit-api.bondaracademy.com/api/users/login', {
-        data: {"user":{"email":"conduit_1@gmail.com","password":"conduit_1"}}
+        data: {"user":{"email":"XXX","password":"YYY"}}
     })
     const token_json = await token.json()
     auth_token = 'Token' +' '+ token_json.user.token

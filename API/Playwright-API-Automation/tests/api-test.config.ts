@@ -6,19 +6,19 @@ const env = processENV || 'dev'
 
 export const config = {
     apiUrl: 'https://conduit-api.bondaracademy.com/api',
-    userEmail: 'conduit_1@gmail.com',
-    userPassword: 'conduit_1'
+    userEmail: 'XXX',
+    userPassword: 'YYY'
 }
 
 // since fixture creates the config object already, we are re-assigning the values which were assigned as part of the previous export line
 if (env === 'dev') {
     config.apiUrl = 'https://conduit-api.bondaracademy.com/api',
-    config.userEmail = 'conduit_1@gmail.com',
-    config.userPassword = 'conduit_1'
+    config.userEmail = 'XXX',
+    config.userPassword = 'YYY'
 }
 
 if (env === 'qa') {
     config.apiUrl = 'https://conduit-api.bondaracademy.com/api',
-    config.userEmail = 'conduit_1@gmail.com',
-    config.userPassword = 'conduit_1'
+    config.userEmail = 'XXX',
+    config.userPassword = 'YYY'
 }
