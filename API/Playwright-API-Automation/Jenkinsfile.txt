@@ -1,0 +1,22 @@
+pipeline {
+    agent any
+
+    stages {
+
+        stage('Install Dependencies') {
+            steps {
+                dir('API/Playwright-API-Automation') {
+                    bat 'npm install'
+                }
+            }
+        }
+
+        stage('Run Playwright Tests') {
+            steps {
+                dir('API/Playwright-API-Automation') {
+                    bat 'npx playwright test'
+                }
+            }
+        }
+    }
+}
