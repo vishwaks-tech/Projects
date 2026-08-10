@@ -2,7 +2,9 @@
 
 ## Overview
 
-The framework is designed to keep API test scenarios simple while centralizing common API communication, test setup, validation, and reporting responsibilities.
+The framework is designed to keep API test scenarios readable while centralizing common API communication, test setup, validation, request-state management, and reporting for the CRUD and negative test suites.
+
+The project also contains a direct Playwright request-based smoke suite for fast API validation.
 
 The primary design goals are:
 
@@ -18,9 +20,13 @@ The primary design goals are:
 
 ## 1. Reusable API Request Handler
 
-The `RequestHandler` is the core reusable component for API communication.
+The `RequestHandler` is the core reusable component for the CRUD and negative API tests.
 
-Instead of implementing `request.get()`, `request.post()`, `request.put()`, and `request.delete()` directly in every test, common request functionality is centralized in the Request Handler.
+Instead of implementing request construction and common status validation separately in each test, the framework centralizes that functionality in:
+
+```text
+tests/utils/request-handler.ts
+```
 
 ### Responsibilities
 
@@ -31,12 +37,13 @@ The Request Handler manages:
 - Query parameters
 - Request headers
 - Request body
-- HTTP methods
-- Response status validation
-- Request/response reporting
+- GET requests
+- POST requests
+- PUT requests
+- DELETE requests
+- HTTP status validation
+- Allure request/response evidence
 - Request-state cleanup
-
-This allows individual tests to concentrate on the scenario being validated.
 
 ---
 
@@ -44,21 +51,17 @@ This allows individual tests to concentrate on the scenario being validated.
 
 The Request Handler uses method chaining to make API test code concise and readable.
 
-For example:
+Example:
 
 ```typescript
 await api
-    .path('/articles')
-    .headers(headers)
-    .body(payload)
-    .postRequest(201);
+    .path('/articles/')
+    .body(articleRequest)
+    .headers({ Authorization: `${auth_token}` })
+    .postRequest(201, 'Create Article');
 ```
 
-Each configuration method returns the same `RequestHandler` instance:
-
-```typescript
-return this;
-```
+Configuration methods return the same Request Handler instance, allowing the request to be built step by step.
 
 ### Benefits
 
@@ -66,15 +69,13 @@ return this;
 - Less repetitive code
 - Consistent request construction
 - Easier maintenance
-- Clear separation between request configuration and execution
+- Clear separation between configuration and execution
 
 ---
 
 ## 3. Separation of Test Intent and API Communication
 
-A key design principle is separating **what the test validates** from **how the API request is executed**.
-
-### Test layer
+The test layer defines the scenario and expected behavior.
 
 ```text
 Scenario
@@ -82,82 +83,130 @@ Scenario
 Test Data
    +
 Expected Result
+   +
+Assertions
 ```
 
-### Request Handler
+The Request Handler manages:
 
 ```text
 URL
 +
 Path
 +
-Headers
-+
 Parameters
++
+Headers
 +
 Body
 +
 HTTP Method
 +
 Request Execution
++
+Common Status Validation
 ```
 
-This prevents API communication code from being duplicated across test scenarios.
+This prevents common API communication logic from being duplicated across the RequestHandler-based tests.
 
 ---
 
 ## 4. Playwright Fixtures
 
-Playwright fixtures are used to provide reusable test setup and dependencies.
+`tests/utils/fixtures.ts` extends the Playwright test object with:
 
-Instead of creating common API-related objects repeatedly in every test, fixtures provide the required objects to the test execution context.
+```text
+api
+config
+```
 
-This helps keep test specifications focused on the API behavior being validated.
+The `api` fixture creates a Request Handler using the configured API URL.
+
+This allows tests to use:
+
+```typescript
+async ({ api }) => {
+    // API test
+}
+```
+
+instead of creating a new Request Handler in every test.
+
+The `config` fixture provides the environment configuration to tests and helpers.
 
 ---
 
 ## 5. Test Data Management
 
-Request payloads are maintained separately from test implementation using JSON files.
-
-Example:
+Request payload templates are maintained separately from test implementation.
 
 ```text
-test-data/
-    |
-    +-- POST-article.json
+tests/request-objects/
+├── POST-article.json
+└── PUT-article.json
 ```
 
-This separates test logic from test data and improves maintainability.
+This separates test data from test logic.
+
+The CRUD tests can copy and modify these payloads without changing the original JSON template.
 
 ---
 
-## 6. Request State Cleanup
+## 6. Dynamic Test Data
+
+`tests/utils/data-generator.ts` uses Faker to generate dynamic article content.
+
+The JSON payload is used as a template and selected fields are replaced with generated values.
+
+This provides more varied test data while retaining a known request structure.
+
+---
+
+## 7. Request State Cleanup
 
 The Request Handler maintains request-specific state such as:
 
-- URL
+- Base URL
 - Path
 - Query parameters
 - Headers
 - Body
 
-After an API request is completed, these fields are cleared before the handler is reused.
+After each RequestHandler API operation, the request-specific fields are reset.
 
-The cleanup prevents configuration from one API request from unintentionally affecting the next API request.
+Conceptually:
+
+```text
+API Request 1
+     |
+     v
+Request State
+     |
+     v
+API Execution
+     |
+     v
+Cleanup
+     |
+     v
+Clean Request State
+     |
+     v
+API Request 2
+```
+
+This prevents configuration from one API call from unintentionally affecting a subsequent call.
 
 ---
 
-## 7. Status-Code Validation
+## 8. Status-Code Validation
 
-Expected HTTP status codes are supplied by the test scenario.
+Expected HTTP status codes are supplied by the test.
 
 Example:
 
 ```typescript
-await api
-    .path('/articles')
-    .postRequest(201);
+.postRequest(201, 'Create Article');
 ```
 
 The Request Handler compares:
@@ -168,48 +217,75 @@ Expected Status Code
 Actual Status Code
 ```
 
-If the values do not match, the test fails with an error indicating the expected and actual status codes.
+If the values do not match, an error is raised and the test fails.
+
+This provides a common HTTP-level validation mechanism for RequestHandler-based API calls.
 
 ---
 
-## 8. Failure Handling
+## 9. Response Validation
 
-When status-code validation fails, the framework creates an error containing information about the failed API operation.
+The tests perform response-level assertions where required.
 
-The failure is raised from the Request Handler so that the test execution identifies the API operation that caused the failure.
+Examples in the CRUD suite include:
+
+- Article title validation
+- Article count validation
+- Slug validation
+- Validation that a created article appears in the article list
+- Validation that a deleted article no longer appears
+- Validation of updated article data
+
+The negative suite validates expected error properties and messages.
 
 ---
 
-## 9. API Request and Response Reporting
+## 10. Failure Handling
 
-API request and response information is captured as part of the Allure reporting implementation.
+The Request Handler raises an error when the actual HTTP status does not match the expected status.
 
-The reporting approach provides visibility into:
+The error includes the expected and actual status codes.
+
+The Request Handler also uses stack-trace handling so the failure can be associated with the relevant API method.
+
+---
+
+## 11. API Request and Response Reporting
+
+For API calls executed through the Request Handler, the framework captures request and response evidence using Allure.
+
+The request evidence includes:
 
 ```text
-API Request
-    |
-    +-- Method
-    +-- URL
-    +-- Headers
-    +-- Request Body
-    |
-    v
-API Response
-    |
-    +-- Status Code
-    +-- Response Body
+Method
+URL
+Headers
+Request Body
 ```
 
-The evidence is associated with the relevant API execution step in the Allure report.
+The response evidence includes:
 
-Detailed reporting implementation is documented in:
+```text
+Status Code
+Response Headers
+Response Body where available
+```
 
-[`allure-reporting.md`](allure-reporting.md)
+The evidence is attached inside an Allure step named with the API operation.
+
+Example structure:
+
+```text
+Create Article: POST <API URL>
+    |
+    +-- API Request
+    |
+    +-- API Response
+```
 
 ---
 
-## 10. Request Handler Lifecycle
+## 12. Request Handler Lifecycle
 
 ```text
 Create / Obtain Handler
@@ -233,10 +309,10 @@ Execute HTTP Request
 Capture Response
         |
         v
-Validate Status
+Attach Allure Evidence
         |
         v
-Report API Activity
+Validate Status
         |
         v
 Cleanup Request State
@@ -244,132 +320,197 @@ Cleanup Request State
 
 ---
 
-## 11. Single-Worker Execution
+## 13. Authentication Helper Design
 
-The framework intentionally uses a single Playwright worker:
+The authentication helper:
+
+```text
+tests/helpers/createToken.ts
+```
+
+uses a temporary Playwright API request context and the Request Handler to create a token.
+
+Flow:
+
+```text
+createToken()
+     |
+     v
+request.newContext()
+     |
+     v
+RequestHandler
+     |
+     v
+POST /users/login
+     |
+     v
+Validate 200
+     |
+     v
+Return Token
+     |
+     v
+Dispose Context
+```
+
+This keeps authentication setup separate from the CRUD test logic.
+
+---
+
+## 14. Direct Smoke-Test Design
+
+The smoke suite intentionally uses Playwright's built-in `request` fixture directly.
+
+```text
+Smoke Test
+    |
+    v
+Playwright request
+    |
+    v
+REST API
+    |
+    v
+HTTP Status Validation
+```
+
+This provides a simple path for fast critical API validation without introducing the Request Handler into the smoke tests.
+
+---
+
+## 15. Single-Worker Execution
+
+The framework uses:
 
 ```typescript
+fullyParallel: false,
 workers: 1
 ```
 
-and disables fully parallel test execution:
-
-```typescript
-fullyParallel: false
-```
-
-This provides:
+The project intentionally uses one worker to provide:
 
 - Predictable execution
-- Easier troubleshooting
 - Controlled API activity
+- Easier troubleshooting
 - Consistent execution behavior
 
 ---
 
-## 12. Playwright Project Organization
+## 16. Playwright Project Organization
 
-The framework uses Playwright projects to organize test categories.
-
-The current configuration includes:
+The Playwright configuration defines:
 
 ```text
 api-testing
-     |
-     +-- smoke-tests
-     |
-     +-- negative-tests
+smoke-tests
+negative-tests
 ```
 
-Project dependencies are used to control the relationship between the test suites.
+The `api-testing` project depends on:
+
+```typescript
+dependencies: ['smoke-tests', 'negative-tests']
+```
+
+The projects use `testMatch` patterns to select their respective test files.
 
 ---
 
-## 13. Reporting Design
+## 17. Environment Configuration
 
-The framework uses Allure as the detailed reporting solution.
+`tests/api-test.config.ts` reads:
 
 ```text
-Test
- |
- v
-Request Handler
- |
- v
-API Request / Response
- |
- v
-Allure Evidence
- |
- v
-Allure Report
+TEST_ENV
 ```
 
-This keeps reporting reusable across the API test scenarios.
+The current configuration supports:
+
+```text
+dev
+qa
+```
+
+The Jenkins pipeline passes the selected value into the Playwright execution.
 
 ---
 
-## 14. Design Principles
+## 18. Design Principles
 
 ### Reusability
 
-Common API functionality is implemented once and reused across tests.
+Common API functionality is implemented once in the Request Handler.
 
 ### Separation of Concerns
 
-Test scenarios, API communication, test setup, test data, and reporting have distinct responsibilities.
+Test scenarios, fixtures, API communication, test data, authentication, configuration, and reporting have separate responsibilities.
 
 ### Maintainability
 
-Changes to common API behavior can be implemented in the Request Handler rather than duplicated across test cases.
+Changes to common API request behavior can be made in the Request Handler rather than duplicated across tests.
 
 ### Readability
 
-Method chaining keeps test scenarios concise and makes the intended API operation easy to understand.
+Method chaining keeps RequestHandler-based test scenarios concise.
 
 ### Controlled Execution
 
-Single-worker execution provides predictable API test execution.
+Single-worker execution provides predictable test execution.
 
 ### Evidence-Based Reporting
 
-Allure provides API execution evidence that can be used for troubleshooting and test-result analysis.
+Allure provides request and response evidence for RequestHandler-based API operations.
 
 ---
 
-## 15. Design Summary
+## 19. Design Summary
 
 ```text
-                    TEST SCENARIO
-                          |
-                          v
+                 REQUESTHANDLER TESTS
+                         |
+                         v
                       FIXTURE
-                          |
-                          v
+                         |
+                         v
                   REQUEST HANDLER
-                          |
-            +-------------+-------------+
-            |             |             |
-            v             v             v
-           URL         Headers        Body
-            |             |             |
-            +-------------+-------------+
-                          |
-                          v
-                 PLAYWRIGHT API
-                   REQUEST CONTEXT
-                          |
-                          v
-                      REST API
-                          |
-                          v
-                 RESPONSE VALIDATION
-                          |
-                          v
-                   ALLURE EVIDENCE
-                          |
-                          v
-                    ALLURE REPORT
+                         |
+            +------------+------------+
+            |            |            |
+            v            v            v
+           URL        Headers        Body
+            |            |            |
+            +------------+------------+
+                         |
+                         v
+                APIRequestContext
+                         |
+                         v
+                     REST API
+                         |
+                         v
+                 Status Validation
+                         |
+                         v
+                 Allure Evidence
+                         |
+                         v
+                   Allure Report
 ```
 
-The resulting design keeps test scenarios focused on **API behavior and validation**, while reusable framework components handle **request construction, execution, validation, cleanup, and reporting**.
+The smoke suite follows a simpler direct-request path:
+
+```text
+Smoke Test
+    |
+    v
+Playwright Request
+    |
+    v
+REST API
+    |
+    v
+Status Validation
+```
+
+The resulting design combines a reusable API framework for the main CRUD/negative suites with a lightweight direct-request approach for smoke validation.

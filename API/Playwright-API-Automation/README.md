@@ -2,7 +2,7 @@
 
 A TypeScript-based API automation framework built with **Playwright Test** for validating REST APIs through reusable CRUD, smoke, and negative test scenarios.
 
-The framework is designed with a reusable API Request Handler, Playwright fixtures, JSON-based test data, controlled test execution, and **Allure reporting with API request and response evidence**.
+The framework includes a reusable API Request Handler, Playwright fixtures, JSON-based request payloads, Faker-generated data, controlled test execution, Allure reporting, API request/response evidence for RequestHandler-based tests, and Jenkins CI/CD integration.
 
 ---
 
@@ -10,7 +10,12 @@ The framework is designed with a reusable API Request Handler, Playwright fixtur
 
 This project demonstrates the design and implementation of a maintainable API automation framework using **Playwright APIRequestContext** and **TypeScript**.
 
-The framework separates test scenarios from common API communication and test setup, allowing API tests to remain focused on business validation while reusable framework components handle request execution and reporting.
+The framework uses two API execution approaches:
+
+- A reusable **Request Handler** for the CRUD and negative test suites
+- Direct Playwright `request` usage for the smoke test suite
+
+The Request Handler centralizes API request construction, status-code validation, request-state cleanup, and Allure API evidence.
 
 ---
 
@@ -31,13 +36,14 @@ The framework separates test scenarios from common API communication and test se
 - Negative testing
 - Reusable Playwright fixtures
 - Test data maintained separately in JSON files
-- Faker-based test data generation
+- Faker-based dynamic test data generation
 - Single-worker API test execution
 - Playwright project dependencies
 - Allure reporting
-- API request and response evidence in Allure
+- API request and response evidence for RequestHandler-based API calls
 - Playwright HTML reporting
 - Jenkins CI/CD integration
+- Dev/QA test-environment selection through `TEST_ENV`
 
 ---
 
@@ -49,9 +55,9 @@ The framework separates test scenarios from common API communication and test se
 | **Node.js** | Runtime environment |
 | **Playwright Test** | API automation and test execution |
 | **Playwright APIRequestContext** | HTTP API communication |
-| **Allure** | Test reporting |
+| **Allure** | Test reporting and API execution evidence |
 | **Faker** | Dynamic test data generation |
-| **Jenkins** | CI/CD integration |
+| **Jenkins** | CI/CD execution |
 | **GitHub** | Source code management |
 
 ---
@@ -59,29 +65,38 @@ The framework separates test scenarios from common API communication and test se
 ## Framework Architecture
 
 ```text
-                    Test Scenarios
-                          |
-                          v
-                  Playwright Fixtures
-                          |
-                          v
-                   Request Handler
-                          |
-                          v
-              Playwright APIRequestContext
-                          |
-                          v
-                       REST API
-                          |
-                          v
-                  Response Validation
-                          |
-                          v
-                    Allure Results
-                          |
-                          v
-                    Allure Report
+                         API TEST SUITE
+                              |
+               +--------------+--------------+
+               |                             |
+               v                             v
+       RequestHandler Path              Direct Request Path
+               |                             |
+       +-------+-------+                     |
+       |               |                     |
+       v               v                     v
+     CRUD           Negative              Smoke
+       |               |                     |
+       +-------+-------+                     |
+               |                             |
+               v                             v
+       APIRequestContext              Playwright Request
+               |                             |
+               +-------------+---------------+
+                             |
+                             v
+                          REST API
+                             |
+                             v
+                    Response Validation
+                             |
+                             v
+                    Playwright / Allure
 ```
+
+Detailed architecture documentation:
+
+[`docs/architecture.md`](docs/architecture.md)
 
 ---
 
@@ -90,26 +105,37 @@ The framework separates test scenarios from common API communication and test se
 ```text
 Playwright-API-Automation/
 │
+├── docs/
+│   ├── architecture.md
+│   ├── framework-design.md
+│   ├── allure-reporting.md
+│   └── test-strategy.md
+│
 ├── tests/
+│   ├── api-test.config.ts
 │   ├── crudFramework.spec.ts
-│   ├── smoke-tests.spec.ts
-│   └── negative-tests.spec.ts
+│   ├── negativeTests.spec.ts
+│   ├── smokeTest.spec.ts
+│   │
+│   ├── helpers/
+│   │   └── createToken.ts
+│   │
+│   ├── request-objects/
+│   │   ├── POST-article.json
+│   │   └── PUT-article.json
+│   │
+│   └── utils/
+│       ├── data-generator.ts
+│       ├── fixtures.ts
+│       └── request-handler.ts
 │
-├── utilities/
-│   ├── request-handler.ts
-│   ├── fixtures.ts
-│   └── ...
-│
-├── test-data/
-│   └── ...
-│
-├── playwright.config.ts
+├── Jenkinsfile
 ├── package.json
 ├── package-lock.json
+├── playwright.config.ts
+├── tsconfig.json
 └── README.md
 ```
-
-The framework separates test scenarios, reusable API request handling, test fixtures, test data, configuration, and reporting.
 
 ---
 
@@ -117,32 +143,44 @@ The framework separates test scenarios, reusable API request handling, test fixt
 
 ### CRUD Testing
 
-The framework validates API resource operations including:
+The CRUD suite validates article operations including:
 
-- Create
-- Retrieve
-- Update
-- Delete
+- Retrieve articles
+- Retrieve tags
+- Create article
+- Retrieve and validate created article
+- Update article
+- Retrieve and validate updated article
+- Delete article
+- Retrieve and validate deleted article
 
-CRUD scenarios validate expected HTTP status codes and API responses.
+The CRUD suite uses the reusable Request Handler.
 
 ### Smoke Testing
 
-Smoke tests validate critical API functionality and provide quick feedback on the basic health of the API.
+The smoke suite provides fast validation of critical API functionality, including:
+
+- Get Articles
+- Get Tags
+- Create, Update, Delete article workflow
+
+The smoke suite uses Playwright's request fixture directly.
 
 ### Negative Testing
 
-Negative tests validate how the API responds to invalid or unexpected inputs and expected error conditions.
+The negative suite validates username length rules and expected API validation errors for invalid user data.
+
+The negative suite uses the reusable Request Handler and validates the returned error response.
 
 ---
 
 ## API Request Handler
 
-The framework uses a centralized **API Request Handler** to provide reusable API communication.
+The framework uses a centralized **API Request Handler** for the CRUD and negative test suites.
 
 The Request Handler supports:
 
-- URL configuration
+- Base URL
 - API paths
 - Query parameters
 - Request headers
@@ -152,12 +190,28 @@ The Request Handler supports:
 - PUT requests
 - DELETE requests
 - HTTP status-code validation
+- Allure request/response evidence
+- Request-state cleanup
 
-The method-chaining design keeps individual test scenarios concise and focused on the API behavior being validated.
+The method-chaining design keeps test scenarios concise and focused on API behavior.
 
-Detailed framework design is documented in:
+Detailed framework design:
 
 [`docs/framework-design.md`](docs/framework-design.md)
+
+---
+
+## Test Data
+
+Request payloads are maintained separately in JSON files:
+
+```text
+tests/request-objects/
+├── POST-article.json
+└── PUT-article.json
+```
+
+The framework also uses Faker to generate dynamic article data for selected CRUD scenarios.
 
 ---
 
@@ -165,19 +219,19 @@ Detailed framework design is documented in:
 
 The project integrates **Allure** with Playwright for detailed test reporting.
 
-The report provides visibility into:
+For API calls executed through the Request Handler, the framework captures:
 
-- Test execution status
-- Test steps
-- Test duration
-- Failures
-- Attachments
-- API request information
-- API response information
+- API request method
+- API request URL
+- Request headers
+- Request body where applicable
+- API response status code
+- Response headers
+- Response body where available
 
-A key feature of this implementation is the capture of **API request and response evidence alongside the relevant API test execution**.
+The request and response evidence is attached to the relevant Allure API step.
 
-Detailed Allure implementation is documented in:
+Detailed reporting documentation:
 
 [`docs/allure-reporting.md`](docs/allure-reporting.md)
 
@@ -185,7 +239,7 @@ Detailed Allure implementation is documented in:
 
 ## Test Execution
 
-Install project dependencies:
+Install dependencies:
 
 ```bash
 npm install
@@ -200,7 +254,7 @@ npx playwright test
 Run a specific test file:
 
 ```bash
-npx playwright test tests/smoke-tests.spec.ts
+npx playwright test tests/smokeTest.spec.ts
 ```
 
 Run tests in headed mode:
@@ -231,45 +285,92 @@ Open the generated report:
 npx allure open allure-report
 ```
 
-The Allure report provides test execution details together with the API request and response evidence captured during execution.
-
 ---
 
 ## Test Execution Configuration
 
 The framework is configured for controlled API test execution.
 
-Key settings include:
-
 ```typescript
-fullyParallel: false
-workers: 1
+fullyParallel: false,
+workers: 1,
+retries: 1
 ```
 
-The project intentionally uses a **single Playwright worker** to provide predictable API test execution.
+The project intentionally uses a single Playwright worker.
 
-Playwright projects are also used to organize test categories and their execution dependencies.
+Playwright projects organize the test suites as follows:
+
+```text
+api-testing
+    |
+    +-- crudFramework.spec.ts
+    |
+    +-- dependencies:
+            smoke-tests
+            negative-tests
+```
+
+The `smoke-tests` and `negative-tests` projects run independently, while the `api-testing` project depends on them.
 
 ---
 
-## CI/CD
+## Environment Configuration
 
-The framework supports **Jenkins-based CI/CD execution**.
+The project supports selecting the test environment using the `TEST_ENV` environment variable.
 
-A typical execution flow is:
+Supported values in the current configuration are:
+
+```text
+dev
+qa
+```
+
+Example:
+
+```bash
+set TEST_ENV=qa && npx playwright test
+```
+
+The environment configuration is maintained in:
+
+```text
+tests/api-test.config.ts
+```
+
+---
+
+## CI/CD with Jenkins
+
+The project includes a `Jenkinsfile` for CI/CD execution.
+
+The Jenkins pipeline:
+
+1. Installs project dependencies
+2. Accepts a `TEST_ENV` parameter
+3. Executes Playwright tests
+4. Copies Allure results
+5. Publishes Allure results through Jenkins
+
+Pipeline flow:
 
 ```text
 Checkout Source
-      ↓
+      |
+      v
+Select TEST_ENV
+      |
+      v
 Install Dependencies
-      ↓
-Execute Playwright Tests
-      ↓
-Generate Test Results
-      ↓
-Generate Allure Report
-      ↓
-Publish / Review Results
+      |
+      v
+Run Playwright Tests
+      |
+      v
+Copy Allure Results
+      |
+      v
+Publish Allure Results
 ```
 
 ---
@@ -281,9 +382,9 @@ Detailed technical documentation is available in the `docs` directory.
 | Document | Description |
 |---|---|
 | [`architecture.md`](docs/architecture.md) | Framework architecture and component interactions |
-| [`framework-design.md`](docs/framework-design.md) | Framework design decisions and reusable components |
+| [`framework-design.md`](docs/framework-design.md) | Request Handler, fixtures, test data, validation, and design decisions |
 | [`allure-reporting.md`](docs/allure-reporting.md) | Allure integration and API request/response evidence |
-| [`test-strategy.md`](docs/test-strategy.md) | Test coverage and testing approach |
+| [`test-strategy.md`](docs/test-strategy.md) | CRUD, smoke, negative testing, validation, and execution strategy |
 
 ---
 
@@ -291,8 +392,8 @@ Detailed technical documentation is available in the `docs` directory.
 
 Potential future enhancements include:
 
-- Environment-specific configuration
 - Expanded API schema validation
+- Additional API coverage
 - Enhanced test-data management
 - AI-assisted test generation
 - AI-based API failure analysis
@@ -314,7 +415,8 @@ Potential future enhancements include:
 - **Test Framework Design**
 - **Playwright Fixtures**
 - **API Request Handling**
-- **Test Data Management**
+- **JSON Test Data Management**
+- **Dynamic Test Data Generation**
 - **Allure Reporting**
 - **CI/CD**
 - **Jenkins**

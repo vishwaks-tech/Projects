@@ -2,9 +2,16 @@
 
 ## Overview
 
-The API automation test strategy is designed to validate REST API behavior through a combination of **CRUD, smoke, and negative testing**.
+The API automation test strategy validates REST API behavior through:
 
-The strategy focuses on validating both successful API operations and expected behavior under invalid conditions.
+- CRUD testing
+- Smoke testing
+- Negative testing
+- HTTP status-code validation
+- Response validation
+- API request/response evidence for RequestHandler-based tests
+
+The strategy combines a reusable RequestHandler-based framework with a lightweight direct-request smoke suite.
 
 ---
 
@@ -15,31 +22,39 @@ The primary objectives are to:
 - Validate API functionality
 - Validate CRUD operations
 - Verify expected HTTP status codes
-- Validate API responses
+- Validate API response content
 - Validate negative scenarios
 - Provide fast smoke-test feedback
-- Capture API request and response evidence
+- Capture API request/response evidence where supported
 - Produce detailed test execution reports
 
 ---
 
-## Test Coverage
+## Test Suite Organization
 
 ```text
 API Test Suite
      |
-     +-- CRUD Testing
+     +-- Smoke Tests
      |
-     +-- Smoke Testing
+     +-- Negative Tests
      |
-     +-- Negative Testing
+     +-- CRUD Framework Tests
+```
+
+Playwright projects organize these suites as:
+
+```text
+smoke-tests
+negative-tests
+api-testing
 ```
 
 ---
 
 ## 1. CRUD Testing
 
-CRUD testing validates the primary resource lifecycle.
+The CRUD framework validates article operations across the resource lifecycle.
 
 ```text
 Create
@@ -51,56 +66,56 @@ Update
 Delete
 ```
 
-### Create
-
-Validates that a new resource can be created successfully.
-
-Typical validation includes:
-
-- HTTP status code
-- Response body
-- Returned resource information
-
 ### Retrieve
 
-Validates that an existing resource can be retrieved successfully.
+The CRUD suite validates:
 
-Typical validation includes:
+- Article retrieval
+- HTTP status
+- Article count
+- Returned article data
 
-- HTTP status code
-- Response data
-- Resource information
+### Create
+
+The suite validates:
+
+- Article creation
+- HTTP 201 response
+- Returned article title
+- Presence of the created article in subsequent retrieval
 
 ### Update
 
-Validates that an existing resource can be updated successfully.
+The suite validates:
 
-Typical validation includes:
-
-- HTTP status code
-- Updated response data
-- Expected field changes
+- Article update
+- HTTP 200 response
+- Updated slug
+- Updated article title
 
 ### Delete
 
-Validates that a resource can be deleted successfully.
+The suite validates:
 
-Typical validation includes:
-
-- HTTP status code
-- Expected delete behavior
+- Article deletion
+- HTTP 204 response
+- Absence of the deleted article from subsequent retrieval
 
 ---
 
 ## 2. Smoke Testing
 
-Smoke testing provides a fast validation of critical API functionality.
+The smoke suite provides fast validation of critical API functionality.
 
-The purpose is to determine whether the API is sufficiently healthy for broader test execution.
+Current smoke scenarios include:
 
-Smoke tests focus on critical and representative API operations rather than comprehensive coverage.
+- Get Articles
+- Get Tags
+- Create, Update, Delete article workflow
 
-### Smoke Testing Objectives
+The smoke suite uses Playwright's built-in `request` fixture directly.
+
+### Smoke Objectives
 
 - Verify basic API availability
 - Validate critical API operations
@@ -111,157 +126,195 @@ Smoke tests focus on critical and representative API operations rather than comp
 
 ## 3. Negative Testing
 
-Negative testing validates how the API behaves when invalid or unexpected input is provided.
+The negative suite validates username length rules through API responses.
 
-Examples include:
+Current scenarios cover:
 
-- Invalid request data
-- Invalid resource identifiers
-- Invalid parameters
-- Validation failures
-- Expected error responses
+- Username shorter than the minimum length
+- Username at the minimum boundary
+- Username at the maximum boundary
+- Username longer than the maximum length
 
-The objective is to verify that the API handles invalid conditions correctly and returns the expected error behavior.
+The test validates the expected error response and error message behavior.
+
+Example boundary values covered include:
+
+```text
+2 characters
+3 characters
+20 characters
+21 characters
+```
 
 ---
 
 ## HTTP Status-Code Validation
 
-Expected HTTP status codes are defined by the test scenario.
+Expected status codes are defined by the test scenario.
 
-The Request Handler compares the expected status code with the actual response status.
+Examples include:
 
 ```text
-Expected Status Code
-          |
-          v
-       Compare
-          ^
-          |
-Actual Status Code
-          |
-          v
-      Pass / Fail
+GET     -> 200
+POST    -> 201
+PUT     -> 200
+DELETE  -> 204
+Negative validation -> 422
 ```
 
-This provides consistent HTTP-level validation across API operations.
+The Request Handler compares the expected status code with the actual response status for RequestHandler-based tests.
+
+The smoke suite performs direct Playwright status assertions.
 
 ---
 
 ## Response Validation
 
-In addition to HTTP status validation, test scenarios can validate response content.
+The tests perform response-level assertions in addition to HTTP status validation.
+
+### CRUD Response Validation
 
 Examples include:
 
-- Required response fields
-- Expected field values
-- Returned resource information
-- Updated data
-- Error response content
-- Conditions specific to the API scenario
+- Article title
+- Article count
+- Article slug
+- Created article presence
+- Updated article presence
+- Deleted article absence
+
+### Negative Response Validation
+
+The negative tests validate:
+
+- Presence or absence of the `username` error property
+- Expected validation error message
 
 ---
 
 ## Test Data Strategy
 
-Request payloads are maintained separately in JSON files where applicable.
-
-Example:
+The project maintains reusable JSON request payloads in:
 
 ```text
-test-data/
-    |
-    +-- POST-article.json
+tests/request-objects/
+├── POST-article.json
+└── PUT-article.json
 ```
 
-This keeps request data separate from the test implementation and improves maintainability.
+These files provide request templates for CRUD operations.
 
-Faker is also used where dynamic test data generation is required.
+The data generator also uses Faker to create dynamic article values for selected tests.
+
+---
+
+## Authentication Strategy
+
+Authentication is handled in two ways within the project.
+
+### CRUD / Negative Framework
+
+The CRUD suite uses:
+
+```text
+tests/helpers/createToken.ts
+```
+
+The helper uses the Request Handler to call the login endpoint, validate the response, and return the authentication token.
+
+### Smoke Suite
+
+The smoke suite obtains its token directly through Playwright's request fixture.
+
+This reflects the current implementation of the two test approaches.
 
 ---
 
 ## Test Execution Strategy
 
-The framework uses controlled Playwright execution.
-
-The configuration includes:
+The Playwright configuration uses:
 
 ```typescript
 fullyParallel: false,
-workers: 1
+workers: 1,
+retries: 1
 ```
 
-### Reason for Single Worker
+### Single Worker
 
-The project intentionally uses a single worker to provide:
+The project intentionally uses one worker to provide:
 
 - Predictable execution
 - Controlled API activity
 - Easier troubleshooting
 - Consistent execution behavior
 
+### Retry
+
+The Playwright configuration is set to one retry.
+
 ---
 
-## Test Organization
+## Test Organization and Dependencies
 
-Playwright projects are used to organize test categories.
-
-The configuration includes:
+The Playwright configuration defines:
 
 ```text
 api-testing
-     |
-     +-- smoke-tests
-     |
-     +-- negative-tests
+smoke-tests
+negative-tests
 ```
 
-Project dependencies are used to control the execution relationship between the test suites.
+The `api-testing` project depends on:
+
+```typescript
+dependencies: ['smoke-tests', 'negative-tests']
+```
+
+The CRUD framework is therefore organized as the dependent API-testing project.
 
 ---
 
-## Test Reporting Strategy
+## Environment Strategy
 
-Allure is used to provide detailed test execution reporting.
-
-The strategy includes capturing:
-
-- Test execution status
-- Test steps
-- Failures
-- API request information
-- API response information
-- Supporting evidence
-
-This makes the test report useful for both result analysis and troubleshooting.
-
----
-
-## API Evidence Strategy
-
-For API execution, the report should make it possible to understand:
+The project supports:
 
 ```text
-What API was called?
-        |
-        v
-Which HTTP method was used?
-        |
-        v
-What request data was sent?
-        |
-        v
-What response was received?
-        |
-        v
-What status code was returned?
-        |
-        v
-Did the validation pass?
+TEST_ENV=dev
+TEST_ENV=qa
 ```
 
-This provides traceability between the test scenario and the API behavior being validated.
+The environment value is read by:
+
+```text
+tests/api-test.config.ts
+```
+
+Jenkins exposes the same environment selection as a build parameter.
+
+The current configuration contains the environment-specific settings used by the project.
+
+---
+
+## Reporting Strategy
+
+The project uses:
+
+- Playwright HTML reporting
+- Playwright list reporting
+- Allure reporting
+
+For RequestHandler-based API calls, Allure captures:
+
+```text
+API Request
+    +
+API Response
+    +
+Status Validation
+```
+
+This provides evidence that can be used during failure investigation.
 
 ---
 
@@ -270,15 +323,16 @@ This provides traceability between the test scenario and the API behavior being 
 When an API test fails, the following information can be used to investigate the failure:
 
 1. Test scenario
-2. API request
-3. Request headers
-4. Request body
-5. API response
+2. API method
+3. API URL
+4. Request headers
+5. Request body where applicable
 6. Response status code
-7. Validation result
-8. Allure test evidence
+7. Response body where available
+8. Validation result
+9. Allure evidence for RequestHandler-based calls
 
-This reduces the need to reproduce the API call manually during initial investigation.
+This reduces the need to manually reconstruct the API operation during initial investigation.
 
 ---
 
@@ -292,6 +346,9 @@ This reduces the need to reproduce the API call manually during initial investig
           v              v              v
         CRUD           Smoke        Negative
           |              |              |
+          v              v              v
+   RequestHandler    Direct Request   RequestHandler
+          |              |              |
           +--------------+--------------+
                          |
                          v
@@ -301,10 +358,7 @@ This reduces the need to reproduce the API call manually during initial investig
                 Response Validation
                          |
                          v
-             Request / Response Evidence
-                         |
-                         v
-                  Allure Report
+             Allure / Test Reporting
 ```
 
-The strategy combines functional API validation, negative testing, controlled execution, and detailed reporting to provide meaningful coverage and troubleshooting evidence.
+The strategy combines reusable API automation, direct smoke validation, negative boundary testing, controlled execution, and detailed reporting.
