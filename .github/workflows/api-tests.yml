@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'API/Playwright-API-Automation/**'
-
+      - '.github/workflows/api-tests.yml'
 jobs:
   api-tests:
     runs-on: ubuntu-latest
