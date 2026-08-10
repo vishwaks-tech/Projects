@@ -1,0 +1,11 @@
+{
+    "article": {
+        "title": "TestingUpd",
+        "description": "TestingUpd",
+        "body": "TestingUpd",
+        "tagList": [
+            "testing"
+        ],
+        "slug":"slugid"
+    }
+}
