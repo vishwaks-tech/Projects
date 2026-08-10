@@ -18,5 +18,23 @@ pipeline {
                 }
             }
         }
+
+        stage('Copy Allure Results') {
+            steps {
+                dir('API/Playwright-API-Automation') {
+                    bat '''
+                        xcopy /E /I /Y "allure-results" "%WORKSPACE%\\allure-results"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            allure([
+                results: [[path: 'allure-results']]
+            ])
+        }
     }
 }
