@@ -22,7 +22,7 @@ pipeline {
         stage('Run Playwright Tests') {
             steps {
                 dir('API/Playwright-API-Automation') {
-                    bat 'npx playwright test'
+                    bat 'set TEST_ENV=%TEST_ENV% && npx playwright test'
                 }
             }
         }
