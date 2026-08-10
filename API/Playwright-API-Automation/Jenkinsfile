@@ -1,6 +1,14 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(
+            name: 'TEST_ENV',
+            choices: ['dev', 'qa'],
+            description: 'Select the environment for API tests'
+        )
+    }
+
     stages {
 
         stage('Install Dependencies') {
