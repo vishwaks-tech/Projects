@@ -257,12 +257,6 @@ Run a specific test file:
 npx playwright test tests/smokeTest.spec.ts
 ```
 
-Run tests in headed mode:
-
-```bash
-npx playwright test --headed
-```
-
 ---
 
 ## Allure Report
