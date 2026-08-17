@@ -333,7 +333,7 @@ JIRA_EMAIL=your-email@example.com
 JIRA_API_TOKEN=your-api-token
 ```
 
-Never commit the real `.env` file to Git.
+
 
 ## Jira Configuration
 
@@ -641,18 +641,6 @@ XLSX QA Review
 Jira Artifact Upload
 ```
 
-The current project does **not** implement:
-
-- Agentic AI
-- AI QA agent
-- Multi-agent architecture
-- Playwright MCP
-- Automated test execution
-- Environment selection through an agent
-- Email orchestration
-- AI-driven failure analysis
-
-These are potential future phases.
 
 ## Troubleshooting
 
@@ -690,29 +678,6 @@ The generator expects structured JSON from the AI model.
 
 If the response cannot be parsed or does not satisfy the expected structure, the generation process should be treated as unsuccessful rather than blindly generating a QA artifact.
 
-## Security
-
-Never commit:
-
-```text
-.env
-```
-
-Never place the following in source control:
-
-- Jira API tokens
-- Jira passwords
-- Ollama credentials
-- Other secrets
-
-Use:
-
-```text
-.env.example
-```
-
-to document required configuration without exposing real values.
-
 ## Technology Stack
 
 | Technology | Purpose |
@@ -729,30 +694,3 @@ to document required configuration without exposing real values.
 | dotenv | Environment configuration |
 | npm | Dependency management |
 | Git | Version control |
-
-## Phase 1 Goal
-
-The goal of Phase 1 is to establish a reliable foundation for an AI-assisted QA lifecycle:
-
-```text
-Jira Requirement
-       |
-       v
-AI Test Generation
-       |
-       v
-Structured Test Cases
-       |
-       v
-Human QA Review
-       |
-       v
-Approved Test Cases
-       |
-       v
-Future Automation
-```
-
-The project deliberately separates **AI generation**, **human QA decision-making**, and **future automation**.
-
-This creates a foundation that can later be extended into an agentic AI QA workflow without requiring the Phase 1 test-case generation capability to be redesigned.
