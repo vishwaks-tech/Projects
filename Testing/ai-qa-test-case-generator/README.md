@@ -477,23 +477,6 @@ REJECTED
 
 The AI is never responsible for setting the final approval decision.
 
-### Automation Boundary
-
-Only:
-
-```text
-QA Decision = APPROVED
-```
-
-is eligible to proceed to automation.
-
-The following must not proceed to automation:
-
-```text
-PENDING
-REJECTED
-```
-
 ## Test Suite Classification
 
 The Excel workbook supports test-suite classification:
@@ -670,50 +653,6 @@ The current project does **not** implement:
 - AI-driven failure analysis
 
 These are potential future phases.
-
-## Future Enhancements
-
-Potential future capabilities include:
-
-```text
-Jira Requirement
-       |
-       v
-AI QA Agent
-       |
-       +----------------------+
-       |                      |
-       v                      v
-Generate Test Cases      Run Automation
-                              |
-                              v
-                         Playwright
-                              |
-                              v
-                           Allure
-                              |
-                              v
-                       Result Analysis
-                              |
-                              v
-                            Jira
-```
-
-Potential future enhancements include:
-
-- AI QA Agent
-- Natural-language QA orchestration
-- Playwright API automation
-- Playwright MCP
-- DEV / QA environment selection
-- Automated execution
-- Allure reporting
-- AI-powered failure analysis
-- Email notifications
-- Agentic AI workflows
-- Multi-agent QA architecture
-
-These capabilities are intentionally outside the current Phase 1 implementation.
 
 ## Troubleshooting
 
