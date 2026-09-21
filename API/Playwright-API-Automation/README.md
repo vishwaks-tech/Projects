@@ -19,6 +19,68 @@ The Request Handler centralizes API request construction, status-code validation
 
 ---
 
+## Getting Started
+
+### 1. Create an Account
+
+Create an account on the Conduit application:
+
+https://conduit.bondaracademy.com/
+
+### 2. Checkout the Project
+
+Checkout the project to any location on your local machine:
+
+```bash
+git clone https://github.com/vishwaks-tech/Projects.git
+```
+
+The Playwright API Automation project is located under:
+
+```text
+API/Playwright-API-Automation
+```
+
+### 3. Update API Credentials
+
+Update the username and password in:
+
+```text
+tests/api-test.config.ts
+```
+
+### 4. Update Smoke Test Credentials
+
+Update the username and password in:
+
+```text
+tests/smokeTest.spec.ts
+```
+
+### 5. Jenkins Execution
+
+If executing the project through Jenkins, update the `PROJECT_PATH` variable in the `Jenkinsfile` with the location where the project has been checked out.
+
+For example:
+
+```groovy
+environment {
+    // Update this path to your local project checkout
+    PROJECT_PATH = 'XXXXXXXXXXXXXXXXXXXX'
+}
+```
+
+The Jenkins pipeline allows you to select the test environment:
+
+```text
+dev
+qa
+```
+
+The user manually checks out the project and updates the API credentials before starting the Jenkins build.
+
+---
+
 ## Key Features
 
 - REST API automation using Playwright
@@ -49,16 +111,16 @@ The Request Handler centralizes API request construction, status-code validation
 
 ## Technology Stack
 
-| Technology | Purpose |
-|---|---|
-| **TypeScript** | Programming language |
-| **Node.js** | Runtime environment |
-| **Playwright Test** | API automation and test execution |
-| **Playwright APIRequestContext** | HTTP API communication |
-| **Allure** | Test reporting and API execution evidence |
-| **Faker** | Dynamic test data generation |
-| **Jenkins** | CI/CD execution |
-| **GitHub** | Source code management |
+| Technology                       | Purpose                                   |
+| -------------------------------- | ----------------------------------------- |
+| **TypeScript**                   | Programming language                      |
+| **Node.js**                      | Runtime environment                       |
+| **Playwright Test**              | API automation and test execution         |
+| **Playwright APIRequestContext** | HTTP API communication                    |
+| **Allure**                       | Test reporting and API execution evidence |
+| **Faker**                        | Dynamic test data generation              |
+| **Jenkins**                      | CI/CD execution                           |
+| **GitHub**                       | Source code management                    |
 
 ---
 
@@ -70,7 +132,7 @@ The Request Handler centralizes API request construction, status-code validation
                +--------------+--------------+
                |                             |
                v                             v
-       RequestHandler Path              Direct Request Path
+       Request Handler Path              Direct Request Path
                |                             |
        +-------+-------+                     |
        |               |                     |
@@ -96,7 +158,7 @@ The Request Handler centralizes API request construction, status-code validation
 
 Detailed architecture documentation:
 
-[`docs/architecture.md`](docs/architecture.md)
+[docs/architecture.md](docs/architecture.md)
 
 ---
 
@@ -197,7 +259,7 @@ The method-chaining design keeps test scenarios concise and focused on API behav
 
 Detailed framework design:
 
-[`docs/framework-design.md`](docs/framework-design.md)
+[docs/framework-design.md](docs/framework-design.md)
 
 ---
 
@@ -233,7 +295,7 @@ The request and response evidence is attached to the relevant Allure API step.
 
 Detailed reporting documentation:
 
-[`docs/allure-reporting.md`](docs/allure-reporting.md)
+[docs/allure-reporting.md](docs/allure-reporting.md)
 
 ---
 
@@ -242,7 +304,7 @@ Detailed reporting documentation:
 Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 Run the complete test suite:
@@ -340,11 +402,23 @@ The project includes a `Jenkinsfile` for CI/CD execution.
 
 The Jenkins pipeline:
 
-1. Installs project dependencies
-2. Accepts a `TEST_ENV` parameter
-3. Executes Playwright tests
-4. Copies Allure results
-5. Publishes Allure results through Jenkins
+1. Validates the configured project path
+2. Checks Node.js and npm availability
+3. Installs project dependencies using `npm ci`
+4. Accepts a `TEST_ENV` parameter
+5. Executes Playwright tests
+6. Publishes Allure results through Jenkins
+
+The project is designed for **manual Jenkins execution**.
+
+Before starting a Jenkins build, the user should:
+
+1. Checkout the project locally
+2. Update the username and password in `tests/api-test.config.ts`
+3. Update the username and password in `tests/smokeTest.spec.ts`
+4. Update `PROJECT_PATH` in the `Jenkinsfile`
+5. Select the required `TEST_ENV`
+6. Start the Jenkins build
 
 Pipeline flow:
 
@@ -352,16 +426,25 @@ Pipeline flow:
 Checkout Source
       |
       v
+Update API Credentials
+      |
+      v
+Update PROJECT_PATH
+      |
+      v
 Select TEST_ENV
+      |
+      v
+Check Project Path
+      |
+      v
+Check Node.js / npm
       |
       v
 Install Dependencies
       |
       v
 Run Playwright Tests
-      |
-      v
-Copy Allure Results
       |
       v
 Publish Allure Results
@@ -373,12 +456,12 @@ Publish Allure Results
 
 Detailed technical documentation is available in the `docs` directory.
 
-| Document | Description |
-|---|---|
-| [`architecture.md`](docs/architecture.md) | Framework architecture and component interactions |
-| [`framework-design.md`](docs/framework-design.md) | Request Handler, fixtures, test data, validation, and design decisions |
-| [`allure-reporting.md`](docs/allure-reporting.md) | Allure integration and API request/response evidence |
-| [`test-strategy.md`](docs/test-strategy.md) | CRUD, smoke, negative testing, validation, and execution strategy |
+| Document                                        | Description                                                            |
+| ----------------------------------------------- | ---------------------------------------------------------------------- |
+| [architecture.md](docs/architecture.md)         | Framework architecture and component interactions                      |
+| [framework-design.md](docs/framework-design.md) | Request Handler, fixtures, test data, validation, and design decisions |
+| [allure-reporting.md](docs/allure-reporting.md) | Allure integration and API request/response evidence                   |
+| [test-strategy.md](docs/test-strategy.md)       | CRUD, smoke, negative testing, validation, and execution strategy      |
 
 ---
 
