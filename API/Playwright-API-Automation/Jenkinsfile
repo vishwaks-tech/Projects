@@ -9,31 +9,77 @@ pipeline {
         )
     }
 
+    environment {
+        // USER: Update this path to your local project checkout
+        PROJECT_PATH = 'XXXXXXXXXXXXXXXXXXXX'
+    }
+
     stages {
+
+        stage('Check Project Path') {
+            steps {
+                bat '''
+                    echo Checking project path...
+                    echo PROJECT_PATH=%PROJECT_PATH%
+
+                    if not exist "%PROJECT_PATH%" (
+                        echo ERROR: Project path does not exist.
+                        exit /b 1
+                    )
+
+                    echo Project path found.
+                '''
+            }
+        }
+
+        stage('Check Node.js') {
+            steps {
+                bat '''
+                    echo Checking Node.js installation...
+                    node --version
+
+                    if %ERRORLEVEL% NEQ 0 (
+                        echo ERROR: Node.js is not installed or not available in PATH.
+                        exit /b 1
+                    )
+
+                    npm --version
+
+                    if %ERRORLEVEL% NEQ 0 (
+                        echo ERROR: npm is not available.
+                        exit /b 1
+                    )
+
+                    echo Node.js and npm are available.
+                '''
+            }
+        }
 
         stage('Install Dependencies') {
             steps {
-                dir('API/Playwright-API-Automation') {
-                    bat 'npm install'
-                }
+                bat '''
+                    cd /d "%PROJECT_PATH%"
+
+                    echo Installing project dependencies...
+                    npm ci
+                '''
             }
         }
 
         stage('Run Playwright Tests') {
             steps {
-                dir('API/Playwright-API-Automation') {
-                    bat 'set TEST_ENV=%TEST_ENV% && npx playwright test'
-                }
-            }
-        }
+                bat '''
+                    cd /d "%PROJECT_PATH%"
 
-        stage('Copy Allure Results') {
-            steps {
-                dir('API/Playwright-API-Automation') {
-                    bat '''
-                        xcopy /E /I /Y "allure-results" "%WORKSPACE%\\allure-results"
-                    '''
-                }
+                    echo ========================================
+                    echo Running Playwright API tests
+                    echo TEST_ENV=%TEST_ENV%
+                    echo ========================================
+
+                    set TEST_ENV=%TEST_ENV%
+
+                    npx playwright test
+                '''
             }
         }
     }
