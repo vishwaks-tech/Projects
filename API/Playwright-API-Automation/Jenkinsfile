@@ -87,7 +87,9 @@ pipeline {
     post {
         always {
             allure([
-                results: [[path: 'allure-results']]
+            // ensures this runs even if tests fail
+            sh 'cp -r allure-results ${WORKSPACE}/archive/allure-results || true'
+            allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
             ])
         }
     }
